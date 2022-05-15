@@ -1,0 +1,441 @@
+---
+title: "BAT 2301 Final Project - CreditCard"
+author: '"Ngoc Nguyen"'
+date: "5/1/2022"
+output:
+  html_document:
+    highlight: tango
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: true
+    df_print: kable
+---
+
+# <span style="color:maroon">1. Dataset Introduction</span>
+
+This project explores the `CrediCard` dataset in the AER library. `CreditCard` is a collection of data on a sample of applicants regarding their credit card usage history and other personal and financial aspects. 
+
+In total, the data frame contains 1,319 observations on 12 variables.
+
+* `card`: [Categorical - Binary] Factor. Was the application for a credit card accepted?
+* `reports`: [Numerical] Number of major derogatory reports.
+* `age`: [Categorical/ Numerical] Age in years plus twelfths of a year.
+* `income`: [Numerical] Yearly income (in USD 10,000).
+* `share`: [Numerical] Ratio of monthly credit card expenditure to yearly income.
+* `expenditure`: [Numerical] Average monthly credit card expenditure.
+* `owner`: [Categorical - Binary] Factor. Does the individual own their home?
+* `selfemp`: [Categorical - Binary] Factor. Is the individual self-employed?
+* `dependents`: [Categorical] Number of dependents.
+* `months`: [Numerical] Months living at current address.
+* `majorcards`: [Numerical] Number of major credit cards held.
+* `active`: [Numerical] Number of active credit accounts. 
+
+> Since this project focuses mainly on analyzing people's credit card expenditure behaviors, variables including `card`, `income` and `expenditure` will be analyzed in respect to other variables. 
+
+**Needed packages**
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(moderndive)
+library(grid)
+library(gridExtra)
+library(scatterplot3d)
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(AER)
+data("CreditCard")
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+CreditCard$dependents <- as.character(CreditCard$dependents)
+```
+
+# <span style="color:maroon">2. Exploratory Data Analysis</span> 
+
+## <span style="color:firebrick">2.1 Correlation between income and personal aspects</span>
+
+**Income, Expenditure Age and House Ownership**
+
+```{r}
+ggplot(CreditCard, aes(x = age, y = income, color = owner))+
+  geom_point(alpha = 0.2)+
+  geom_smooth(method = "lm", se = F)+
+  labs(title = "Income, Age \n& House Ownership", color = "House", x = "Age", y = "Income")+
+  theme(text = element_text(size = 8), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), plot.title = element_text(size = 10), legend.text = element_text(size = 8))-> p1
+
+ggplot(CreditCard, aes(x = age, y = expenditure, color = owner))+
+  geom_point(alpha = 0.2)+
+  geom_smooth(method = "lm", se = F)+
+  labs(title = "Expenditure, Age \n& House Ownership", color = "House", x = "Age", y = "Credit card expenditure")+
+  theme(text = element_text(size = 8), axis.text.x = element_text(size = 8), axis.text.y = element_text(size = 8), plot.title = element_text(size = 10), legend.text = element_text(size = 8))-> p2
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+>
+* Overall, there is a positive correlation between Age and Income for both house owners and non-house owners: As people get older, their incomes increase. However, for every ages, people with house ownership earn a higher income than those without. 
+* Credit card expenditure for non-house owners are relatively static over different ages. Meanwhile, there is a downward trend in credit card expenditure for house owners: their credit card expenditures decrease as they age.
+* People owning a house are typically older than those who do not. 
+
+
+**Income, expenditure and Self-Employment**
+```{r}
+ggplot(CreditCard, aes(x = selfemp, y = income))+
+  geom_boxplot(color = "#008080", fill = "#AFEEEE")+
+  labs(title = "Income \n& Self-Employment", x = "Self-Employment", y = "Credit card expenditure") -> p3
+
+ggplot(CreditCard, aes(x = selfemp, y = expenditure))+
+  geom_boxplot(color = "#008080", fill = "#AFEEEE")+
+  labs(title = "Credit card expenditure \n& Self-Employment", x = "Self-Employment", y = "Income") -> p4
+
+grid.arrange(p3, p4, ncol = 2)
+```
+
+>
+* On average, self-employed people earn a higher income, but their incomes have more variability than employed people. 
+* In general, employed people spent more money through credit card. However, the difference is minimal.
+
+**Income, expenditure and number of dependents**
+```{r}
+ggplot(CreditCard, aes(x = dependents, y = income))+
+  geom_boxplot(color = "#008080", fill = "#AFEEEE")+
+  labs(title = "Income and number of dependents", x = "Number of dependents", y = "Income")
+
+ggplot(CreditCard, aes(x = dependents, y = expenditure))+
+  geom_boxplot(color = "#008080", fill = "#AFEEEE")+
+  labs(title = "Credit card expenditure and number of dependents", x = "Number of dependents", y = "Credit card expenditure")
+```
+
+**Distribution of dependent numbers**
+```{r}
+ggplot(CreditCard, aes(x = dependents))+
+  geom_bar(color = "#2F4F4F", fill = "#20B2AA")+
+  labs(title = "Distribution of dependent numbers")
+```
+
+```{r}
+ggplot(CreditCard, aes(x = dependents))+
+  geom_bar(color = "#2F4F4F", fill = "#20B2AA")+
+  facet_wrap(~ owner)+
+  labs(title = "Distribution of dependent numbers based on house ownership")
+```
+
+> In general, the majority of cardholders in this dataset have 0 dependents. 
+
+## <span style="color:firebrick">2.2 Credit card behaviors & Acceptance rate</span>
+
+**Summary of income, number of active credit cards and credit card expenditure**
+```{r}
+CreditCard %>% 
+  summarise(mean_inc = mean(income), mean_exp = mean(expenditure), mean_share = mean(share), mean_active = mean(active))
+```
+
+> On average, people have an income of 33,650 USD yearly, credit card expenditure at the rate of 185 USD monthly and number of active credit cards of 7 cards. Interestingly, the average portion of monthly credit card expenditure to yearly income is 6.9%. 
+
+**Income, Average monthly Credit Card expenditure and Self-Employment**
+
+```{r}
+ggplot(CreditCard, aes(x = income, y = expenditure, color = selfemp))+
+  geom_point(alpha = 0.2)+
+  geom_smooth(method = "lm", se = F)+
+  labs(title = "Income and Average monthly Credit Card expenditure", color = "Self-Employment", x = "Income", y = "Average monthly Credit Card expenditure")
+```
+
+> Generally, there is a positive correlation between income and average monthly credit card expenditure, which is slightly stronger for employed people.
+
+**Income and Credit Card application acceptance**
+
+```{r}
+ggplot(CreditCard, aes(x = card, y = income))+
+  geom_boxplot(color = "#008080", fill = "#AFEEEE")+
+  labs(title = "Income and Credit Card application acceptance", x = "Card accepted", y = "Income")
+```
+
+> Overall, people who had their credit card application accepted had a higher average income.
+
+**Income, Number of Active Cards and Card acceptance**
+
+```{r}
+ggplot(CreditCard, aes(x = income, y = active, color = card))+
+  geom_point(alpha = 0.2)+
+  geom_smooth(method = "lm", se = F)+
+  labs(title = "Income, Number of Active Cards and Card acceptance", color = "Card acceptanced", x = "Income", y = "Numbers of active cards")
+```
+
+> There is a positive correlation between income and the numbers of active cards.
+
+# <span style="color:maroon">3. Simple Linear Regression & Two-Sampled Test</span>
+
+## <span style="color:firebrick">3.1 Income & Credit Card Expenditure</span>
+
+```{r}
+cor(CreditCard$expenditure, CreditCard$income)
+```
+
+```{r}
+exp_inc <- lm(expenditure ~ income, data = CreditCard)
+get_regression_table(exp_inc)
+```
+
+**Regression Equation:**
+
+$$
+\widehat{expenditure} = 33.027 + 45.175 \times income 
+$$
+
+**Coefficient interpretation:**
+
+- The intercept of 33.027 represents the average monthly credit card expenditure when the card holder's yearly income equals 0.
+
+- The slope of 45.175: For every increase in income of 10,000 USD (yearly income is recorded in 10,000 USD), there is an associated increase in average monthly credit card expenditure of 45.175 USD.
+
+**Test the hypothesis of interest:**
+
+- Null: There is no statistically significant relationship between monthly credit card expenditure and yearly income. 
+
+$$ H_0: \beta_{inc} = 0 $$
+
+- Alternative: There is a statistically significant relationship between monthly credit card expenditure and yearly income. 
+
+$$ H_A: \beta_{inc} \ne 0 $$
+
+> According to the regression table, since the p-value equals 0 for income, we can reject the null hypothesis and conclude that there is a statistically significant relationship between `income` and `expenditure`. 
+
+## <span style="color:firebrick">3.2 Self-Employment & Credit Card Expenditure</span>
+
+```{r}
+exp_selfemp <- lm(expenditure ~ selfemp, data = CreditCard)
+get_regression_table(exp_selfemp)
+```
+
+**Regression Equation:**
+
+$$
+\widehat{expenditure} = 187.697 - 38.264 \times 1_{\mbox{selfemp}}(x)  
+$$
+
+**Coefficient interpretation:**
+
+- The intercept of 187.697 represents the average monthly credit card expenditure when the card holder is not self-employed.
+
+- The slope of -38.264 represents the predicted difference in the average monthly credit card expenditures between self-employed and non-self-employed people.
+
+**Test the hypothesis of interest:**
+
+- Null: There is no difference between the mean monthly credit card expenditures of a house owner and a non-owner.
+
+$$ H_0: \mu_{selfemp} = \mu_{non-selfemp} $$
+
+- Alternative: There is a difference between the mean monthly credit card expenditures of a house owner and a non-owner.
+
+$$ H_A: \mu_{selfemp} \ne \mu_{non-selfemp} $$
+
+```{r}
+t.test(expenditure ~ selfemp, data = CreditCard)
+```
+
+> * Since p-value is 0.1499 and is bigger than 0.05, and 0 is included in the confidence interval, we lack the evidence to reject the null hypothesis that there is no difference between the mean monthly credit card expenditures of a house owner and a non-owner. 
+* In other words, the mean monthly credit card is expected to be the same for self-employed and non-self-employed people.
+
+## <span style="color:firebrick">3.3 House ownership and Credit Card Expenditure</span>
+
+```{r}
+exp_house <- lm(expenditure ~ owner, data = CreditCard)
+get_regression_table(exp_house)
+```
+
+**Regression Equation:**
+
+$$
+\widehat{expenditure} = 162.559 + 51.075 \times 1_{\mbox{owner}}(x)  
+$$
+
+**Coefficient interpretation:**
+
+- The intercept of 162.559 represents the average monthly credit card expenditure when the card holder is not owning a house.
+
+- The slope of 51.075 represents the predicted difference in the average monthly credit card expenditures between a house owner and a non-owner.
+
+**Test the hypothesis of interest:**
+
+- Null: There is no difference between the mean monthly credit card expenditures of a house owner and a non-owner.
+
+$$ H_0: \mu_{owner} = \mu_{non-owner} $$
+
+- Alternative: There is a difference between the mean monthly credit card expenditures of a house owner and a non-owner.
+
+$$ H_A: \mu_{owner} \ne \mu_{non-owner} $$
+
+```{r}
+t.test(expenditure ~ owner, data = CreditCard)
+```
+
+>  Based on the evidence (p-value is much smaller than 0.05 and 0 is not in the confidence interval), we reject the null hypothesis and conclude that there is a difference between the mean monthly credit card expenditures of a house owner and a non-owner.
+
+# <span style="color:maroon">4. Multiple Regression</span>
+
+## <span style="color:firebrick">4.1 Income, Self-Employment & Credit Card Expenditure</span>
+
+```{r}
+ggplot(CreditCard, aes(x = income, y = expenditure, color = selfemp))+
+  geom_point(alpha = 0.2)+
+  geom_smooth(method = "lm", se = F)+
+  labs(title = "Credit card expenditure, income and self-employment", color = "Self-Employemnt", x = "Yearly Income", y = "Monthly credit card expenditure")
+```
+
+```{r}
+reg_para <- lm(expenditure ~ income + selfemp, data = CreditCard)
+summary(reg_para)
+```
+
+```{r}
+reg_inter <- lm(expenditure ~ income * selfemp, data = CreditCard)
+summary(reg_inter)
+```
+
+Based on the graph and the regression summaries, the parallel slopes model is preferred because it has higher Adjusted R-squared and would produce a simpler prediction compared to interaction model.
+
+```{r}
+exp_inc_parallel <- lm(expenditure ~ income + selfemp, data = CreditCard)
+get_regression_table(exp_inc_parallel)
+```
+
+**Regression Equation:**
+
+$$
+\widehat{expenditure} = 33.935 + 46.403 \times income - 73.078 \times 1_{\mbox{selfemp}}(x) 
+$$
+
+**Coefficient interpretation:**
+
+- The intercept of 33.935 represents the average monthly credit card expenditure when the card holder's yearly income equals zero, regardless of self-employment status.
+
+- The slope of 46.403: For every increase in income of 10,000 USD (yearly income is recorded in 10,000 USD), there is an associated increase in average monthly credit card expenditure of 46.403 USD, regardless of self-employment status.
+
+- The slope of -73.078: The predicted difference in the average monthly credit card expenditure between self-employed and non-self-employed people.
+
+**Test the hypothesis of interest:**
+
+For `income`:
+
+- Null: There is no statistically significant relationship between monthly credit card expenditure and yearly income.
+
+$$ H_0: \beta_ {inc} = 0 $$
+
+- Alternative: There is a statistically significant relationship between monthly credit card expenditure and yearly income.
+
+$$ H_A: \beta_ {inc} \ne 0 $$
+
+For `selfemp`:
+
+- Null: There is no statistically significant relationship between monthly credit card expenditure and self-employment status.
+
+$$ H_0: \beta_{selfemp} = 0 $$
+
+- Alternative: There is a statistically significant relationship between monthly credit card expenditure and self-employment status.
+
+$$ H_A: \beta_{selfemp} \ne 0 $$
+
+> According to the regression table, since the p-value equals 0 for `income`, we can reject the null hypothesis and conclude that there is a statistically significant relationship between `income` and `expenditure`. On the other hand, the p-value equals 0.010 for `selfemp` (bigger than 0.05), therefore, we fail to reject the null hypothesis and conclude that there is no statistically significant relationship between monthly credit card expenditure and self-employment status.
+
+## <span style="color:firebrick">4.2 Income, Credit Card Expenditure and Portion of monthly credit card expenditure to yearly income</span>
+
+```{r}
+CreditCard_share <- CreditCard %>% 
+  mutate(shareInPercent = share*100)
+```
+
+
+```{r}
+ggplot(CreditCard_share, aes(x = income, y = shareInPercent))+
+  geom_point(alpha = 0.2, color = "#90EE90")+
+  geom_smooth(method = "lm", se = F, color = "#006400")+
+  labs(title = "Expenditure ratio \n& Income", x = "Income", y = "Expenditure ratio")+
+  theme(text = element_text(size = 8), 
+        axis.text.x = element_text(size = 8), 
+        axis.text.y = element_text(size = 8), 
+        plot.title = element_text(size = 10), 
+        legend.text = element_text(size = 8))-> p5
+
+ggplot(CreditCard_share, aes(x = expenditure, y = shareInPercent))+
+  geom_point(color = "#90EE90", alpha = 0.2)+
+  geom_smooth(method = "lm", se = F, color = "#006400")+
+  labs(title = "Expenditure ratio \n& Expenditure level", x = "Credit card expenditure", y = "Expenditure ratio")+
+  theme(text = element_text(size = 8), 
+        axis.text.x = element_text(size = 8), 
+        axis.text.y = element_text(size = 8), 
+        plot.title = element_text(size = 10), 
+        legend.text = element_text(size = 8))-> p6
+
+grid.arrange(p5, p6, ncol = 2)
+```
+
+```{r}
+plot <- scatterplot3d(x = CreditCard_share$income,
+       y= CreditCard_share$expenditure,
+       z= CreditCard_share$shareInPercent,
+       xlab = "Income", ylab = "Expenditure", zlab = "Share", 
+       highlight.3d = TRUE, angle = 55,
+       cex.axis = 0.5,
+       cex.lab = 0.8, main = "Income, Expenditure & Share", pch = 20)
+
+fit <- lm(shareInPercent ~ income + expenditure,data = CreditCard_share)
+plot$plane3d(fit, lty.box = "solid")
+```
+
+> Because most of the observations are centered around the low income and low expenditure corner, most data was collected from people with humble incomes and . Therefore, implications from this dataset will better represent people in with this chracteristic, rather than exceptionally high-incomed or extravgant credit card users. 
+
+```{r}
+share_model <- lm(shareInPercent ~ income + expenditure, data = CreditCard_share)
+get_regression_table(share_model)
+```
+
+**Regression equation:**
+
+$$
+\widehat{share} = 6.832 - 1.761 \times income + 0.032 \times expenditure
+$$
+
+**Coefficient interpretation:**
+
+- The intercept of 6.832 represents the average ratio (in %) of monthly credit card expenditure to yearly income when the card holder's yearly income and credit card expenditure equal zeros.
+
+- The slope of -1.761: For every increase in income of 10,000 USD (yearly income is recorded in 10,000 USD), there is an associated decrease in the average ratio (in %) of monthly credit card expenditure to yearly income of 1.761%.
+
+- The slope of 0.032: For every increase in monthly credit card expenditure of 1 USD, there is an associated increase in the average ratio (in %) of monthly credit card expenditure to yearly income of 0.032%.
+
+# <span style="color:maroon">5. Conclusion</span>
+
+There are three main takeaways from analyzing the `CrediCard` dataset:
+
+1) As people age, they tend to earn higher incomes but spend less through credit card. Additionally, house-owners generally have a higher income, higher credit card expenditure and are of higher age groups.
+
+2) Whilst self-employed credit card users earn more, they tend to have lower credit card expenditure. 
+
+3) Monthly Credit Card Expenditure has a positive correlation with Income. The levels of expenditure are on average lower for self-employed people.
+
+$$
+\widehat{expenditure} = 33.935 + 46.403 \times income - 73.078 \times 1_{\mbox{selfemp}}(x) 
+$$
+
+4) There is a statistically significance relationship between credit card expenditure and house ownership; however, there is no between credit card expenditure and self-employment status. Hence, house ownership can be a better indicator of credit card expenditure than self-employment status.
+
+5) The average ratio (in %) of monthly credit card expenditure to yearly income has a negative correlation with income levels, but has a positive correlation with expenditure level. One interesting implication from this is that as people's income increases, the portion of their credit card expenditure with respect to their income decreases. 
+
+$$
+\widehat{share} = 6.832 - 1.761 \times income + 0.032 \times expenditure
+$$
+
+
+**Note:**
+
+* This dataset is a good representation of people with relatively low incomes and credit card expenditure. However, its implications are not valid to study about high-income and excessive credit card users.
+* Correlation is not synonymous with causation, but rather demonstrate how variables change with respect to the others. 
+
+
